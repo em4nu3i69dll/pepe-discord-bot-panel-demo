@@ -30,9 +30,6 @@ Bot de Discord simplificado con panel web para gestionar bienvenidas, embeds y a
 ### Pasos de Instalación
 
 1. **Clonar o descargar el proyecto**
-```bash
-cd Bot-Es
-```
 
 2. **Instalar dependencias**
 ```bash
