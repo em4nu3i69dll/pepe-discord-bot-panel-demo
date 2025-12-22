@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Pepe Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/dashboard/dashboard.css">
+</head>
+<body class="dashboard-page">
+    <div class="background-layer">
+        <div class="mosaic-grid">
+            <% for (let i = 0; i < 120; i++) { %>
+                <div class="mosaic-item"></div>
+            <% } %>
+        </div>
+    </div>
+    
+    <%- include('../parciales/barra-lateral', { pagina: 'dashboard', usuario: usuario }) %>
+
+    <main class="main-content">
+        <header class="main-header glass-card">
+            <div class="header-left">
+                <div class="header-copy">
+                    <h1><i class="fas fa-building"></i> Mis Servidores</h1>
+                    <p>Administra los servidores donde tienes permisos.</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="server-grid">
+            <% if (servidores && servidores.length > 0) { %>
+                <% servidores.forEach(servidor => { %>
+                    <div class="server-card glass-card">
+                        <div class="card-header">
+                            <img src="<%= servidor.icon ? `https://cdn.discordapp.com/icons/${servidor.id}/${servidor.icon}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png' %>" alt="Icono del Servidor" class="server-icon" onerror="this.onerror=null; this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                            <% if (servidor.owner) { %>
+                                <div class="badge badge-owner" title="Dueño"><i class="fas fa-crown"></i></div>
+                            <% } else if (servidor.permissions && (servidor.permissions & 0x8) === 0x8) { %>
+                                <div class="badge badge-admin" title="Administrador"><i class="fas fa-user-shield"></i></div>
+                            <% } %>
+                        </div>
+                        <h3 class="server-name"><%= servidor.name %></h3>
+                        <div class="card-actions">
+                            <% if (servidor.tieneBot) { %>
+                                <a href="/bienvenida/<%= servidor.id %>" class="btn-modern btn-primary">
+                                    <i class="fas fa-cog"></i>
+                                    Configurar
+                                </a>
+                            <% } else { %>
+                                <a href="https://discord.com/oauth2/authorize?client_id=<%= clientId %>&scope=bot%20applications.commands&permissions=8&guild_id=<%= servidor.id %>&disable_guild_select=true" target="_blank" class="btn-modern btn-success">
+                                    <i class="fas fa-plus"></i>
+                                    Invitar Bot
+                                </a>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <div class="empty-state glass-card">
+                    <i class="fas fa-inbox" style="font-size: 4rem; color: var(--color-texto-muted); margin-bottom: 1rem;"></i>
+                    <h2>No se encontraron servidores</h2>
+                    <p>No tienes acceso a ningún servidor o no se pudieron cargar los servidores.</p>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--color-texto-muted);">
+                        Asegúrate de que el bot tenga los permisos necesarios y que hayas autorizado la aplicación correctamente.
+                    </p>
+                </div>
+            <% } %>
+        </div>
+    </main>
+</body>
+</html>
+

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pepe Demo • Acceso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/login/login.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <% 
+    var estadisticas = (typeof metrics !== 'undefined' && metrics) ? metrics : { servidores: 0, usuarios: 0, canales: 0 };
+    var avatares = (typeof avatares !== 'undefined' && Array.isArray(avatares)) ? avatares : [];
+  %>
+
+  <div class="background-layer">
+    <div class="mosaic-grid">
+      <% if (avatares.length > 0) { %>
+        <% for(let i=0; i < 150; i++) { %>
+          <div class="mosaic-item">
+            <img src="<%= avatares[i % avatares.length] %>" loading="lazy" alt="">
+          </div>
+        <% } %>
+      <% } else { %>
+        <% for(let i=0; i < 120; i++) { %>
+          <div class="mosaic-item"></div>
+        <% } %>
+      <% } %>
+    </div>
+    <div class="background-overlay"></div>
+  </div>
+
+  <div class="marquee-top">
+    <div class="marquee-content">
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <div class="left-column">
+      <div class="hero-content">
+        <h1 class="hero-title">
+          Control <span>Total</span><br>
+          para tu
+          <span class="typing-container">
+            <span class="typing-text" id="typewriter">Servidor</span>
+          </span>
+        </h1>
+        <p class="hero-desc">
+          Panel de control simplificado para gestionar bienvenidas, embeds y autoroles en tu servidor de Discord.
+        </p>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div class="login-container">
+        <div class="login-header">
+          <span class="login-supra">Bienvenido</span>
+          <h2 class="login-title">Inicia sesión<br>en tu cuenta.</h2>
+          <p class="login-subtitle">Gestiona tus servidores y configura tu bot desde un entorno seguro.</p>
+        </div>
+
+        <div class="login-actions">
+          <a href="/auth/discord" class="btn-discord-large">
+            <div class="btn-content">
+              <div class="discord-icon-box">
+                <i class="fab fa-discord"></i>
+              </div>
+              <span class="btn-text">Continuar con Discord</span>
+            </div>
+            <i class="fas fa-arrow-right arrow-icon"></i>
+          </a>
+        </div>
+
+        <div class="login-footer-stats">
+          <div class="mini-stat">
+            <span class="ms-value" data-val="<%= estadisticas.servidores %>">0</span>
+            <span class="ms-label">Servidores</span>
+          </div>
+          <div class="mini-stat">
+            <span class="ms-value" data-val="<%= estadisticas.usuarios %>">0</span>
+            <span class="ms-label">Usuarios</span>
+          </div>
+          <div class="mini-stat">
+            <span class="ms-value" data-val="<%= estadisticas.canales %>">0</span>
+            <span class="ms-label">Canales</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="marquee-bottom">
+    <div class="marquee-content reverse">
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+      <span>BIENVENIDA</span> • <span>EMBEDS</span> • <span>DEMO</span> • <span>CREADO POR EM4NU3L69dll</span> •
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const textElement = document.getElementById('typewriter');
+      const palabras = ['Servidor', 'Comunidad'];
+      let indicePalabra = 0;
+      let indiceCaracter = palabras[0].length;
+      let eliminando = false;
+      let velocidad = 100;
+      
+      textElement.textContent = palabras[0];
+
+      function escribir() {
+        const palabraActual = palabras[indicePalabra];
+        
+        if (eliminando) {
+          textElement.textContent = palabraActual.substring(0, indiceCaracter - 1);
+          indiceCaracter--;
+          velocidad = 60;
+        } else {
+          textElement.textContent = palabraActual.substring(0, indiceCaracter + 1);
+          indiceCaracter++;
+          velocidad = 120;
+        }
+
+        if (!eliminando && indiceCaracter === palabraActual.length) {
+          eliminando = true;
+          velocidad = 3000; 
+        } else if (eliminando && indiceCaracter === 0) {
+          eliminando = false;
+          indicePalabra = (indicePalabra + 1) % palabras.length;
+          velocidad = 300;
+        }
+
+        setTimeout(escribir, velocidad);
+      }
+      
+      setTimeout(() => {
+        eliminando = true;
+        escribir();
+      }, 3000);
+
+      document.querySelectorAll('.ms-value').forEach(el => {
+        const objetivo = parseInt(el.getAttribute('data-val')) || 0;
+        let actual = 0;
+        const duracion = 1500;
+        const paso = objetivo / (duracion / 16);
+        function actualizar() {
+          actual += paso;
+          if (actual < objetivo) {
+            el.textContent = Math.floor(actual).toLocaleString();
+            requestAnimationFrame(actualizar);
+          } else {
+            el.textContent = objetivo.toLocaleString();
+          }
+        }
+        setTimeout(actualizar, 500);
+      });
+    });
+  </script>
+</body>
+</html>
+

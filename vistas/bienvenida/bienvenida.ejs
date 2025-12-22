@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenidas - <%= servidor.name %></title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/bienvenida/bienvenida.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-layer">
+        <div class="mosaic-grid">
+            <% for (let i = 0; i < 120; i++) { %>
+                <div class="mosaic-item"></div>
+            <% } %>
+        </div>
+    </div>
+
+    <%- include('../parciales/barra-lateral', { pagina: 'bienvenida', usuario: usuario, servidor: servidor }) %>
+
+    <main class="main-content">
+        <header class="main-header glass-card">
+            <img src="https://cdn.discordapp.com/icons/<%= servidor.id %>/<%= servidor.icon %>.png" class="server-icon" onerror="this.onerror=null; this.src='https://cdn.discordapp.com/embed/avatars/0.png';">
+            <div class="server-header-info">
+                <h1><i class="fas fa-door-open"></i> Configuración de Bienvenidas</h1>
+                <p>Personaliza los mensajes de bienvenida y autoroles para tu servidor.</p>
+            </div>
+        </header>
+
+        <section class="settings-content">
+            <form method="POST" action="/bienvenida/<%= servidor.id %>">
+                <div class="settings-card">
+                    <h3>
+                        <i class="fas fa-hashtag"></i>
+                        Mensajes de Bienvenida
+                    </h3>
+                    
+                    <div class="toggle-switch-wrapper">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="bienvenida-habilitada" name="bienvenida_habilitada" <%= config && config.bienvenida_habilitada ? 'checked' : '' %>>
+                            <span class="slider"></span>
+                        </label>
+                        <label for="bienvenida-habilitada" style="margin-left: 10px; font-weight: 600; color: #fff; cursor: pointer;">Habilitar mensajes de bienvenida</label>
+                    </div>
+
+                    <div id="bienvenida-opciones" class="<%= config && config.bienvenida_habilitada ? '' : 'hidden' %>">
+                        <div class="form-group">
+                            <label for="canal-bienvenida">Canal</label>
+                            <select id="canal-bienvenida" name="canal_bienvenida_id" class="select-canal" required>
+                                <option value="" disabled <%= !config || !config.canal_bienvenida_id ? 'selected' : '' %>>Seleccionar canal</option>
+                                <% canales.forEach(canal => { %>
+                                    <option value="<%= canal.id %>" <%= config && config.canal_bienvenida_id === canal.id ? 'selected' : '' %>># <%= canal.name %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="mensaje-bienvenida">Mensaje de Bienvenida</label>
+                            <textarea id="mensaje-bienvenida" name="mensaje_bienvenida" placeholder="¡Bienvenido {usuario} al servidor {servidor}!"><%= config && config.mensaje_bienvenida ? config.mensaje_bienvenida : '' %></textarea>
+                            <small>Variables disponibles: {usuario}, {nombre}, {servidor}, {miembros}</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Embed de Bienvenida (Opcional)</label>
+                            <input type="text" name="embed_titulo" placeholder="Título" value="<%= config && config.embed_bienvenida ? JSON.parse(config.embed_bienvenida).titulo || '' : '' %>">
+                            <textarea name="embed_descripcion" placeholder="Descripción..." style="margin-top: 10px;"><%= config && config.embed_bienvenida ? JSON.parse(config.embed_bienvenida).descripcion || '' : '' %></textarea>
+                            <input type="color" name="embed_color" value="<%= config && config.embed_bienvenida ? JSON.parse(config.embed_bienvenida).color || '#5865F2' : '#5865F2' %>" style="margin-top: 10px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                        <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autorol-habilitado" name="autorol_habilitado" <%= config && config.autorol_habilitado ? 'checked' : '' %>>
+                                <span class="slider"></span>
+                            </label>
+                            <label for="autorol-habilitado" style="margin-left: 10px; font-weight: 600; color: #fff; cursor: pointer;">Asignar roles automáticamente</label>
+                        </div>
+                        <div id="autorol-opciones" class="<%= config && config.autorol_habilitado ? '' : 'hidden' %>">
+                            <p style="color: #aaa; margin-bottom: 15px; font-size: 14px;">Los roles seleccionados se asignarán automáticamente a los nuevos miembros.</p>
+                            <div class="roles-container">
+                                <% if (roles && roles.length > 0) { %>
+                                    <div class="roles-grid">
+                                        <% roles.forEach(rol => { %>
+                                            <% 
+                                                const estaSeleccionado = config && config.roles_auto && 
+                                                    Array.isArray(JSON.parse(config.roles_auto)) && 
+                                                    JSON.parse(config.roles_auto).some(r => String(r) === String(rol.id));
+                                            %>
+                                            <div class="role-item">
+                                                <input type="checkbox"
+                                                       name="roles_auto[]"
+                                                       value="<%= rol.id %>"
+                                                       <%= estaSeleccionado ? 'checked' : '' %>
+                                                       id="role-<%= rol.id %>">
+                                                <label for="role-<%= rol.id %>" class="role-label">
+                                                    <span class="role-name" style="color: <%= rol.color !== 0 ? '#' + rol.color.toString(16).padStart(6, '0') : '#99aab5' %>"><%= rol.name %></span>
+                                                </label>
+                                            </div>
+                                        <% }); %>
+                                    </div>
+                                <% } else { %>
+                                    <p class="no-roles-message">No hay roles disponibles.</p>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                        <button type="submit" class="btn-modern btn-primary">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bienvenidaHabilitada = document.getElementById('bienvenida-habilitada');
+            const bienvenidaOpciones = document.getElementById('bienvenida-opciones');
+            const autorolHabilitado = document.getElementById('autorol-habilitado');
+            const autorolOpciones = document.getElementById('autorol-opciones');
+
+            bienvenidaHabilitada.addEventListener('change', () => {
+                bienvenidaOpciones.classList.toggle('hidden', !bienvenidaHabilitada.checked);
+            });
+
+            autorolHabilitado.addEventListener('change', () => {
+                autorolOpciones.classList.toggle('hidden', !autorolHabilitado.checked);
+            });
+        });
+    </script>
+</body>
+</html>
+
