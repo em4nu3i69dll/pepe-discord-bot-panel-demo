@@ -74,3 +74,7 @@ Desarrollado con:
 - [Passport.js](https://www.passportjs.org/) - Autenticación
 - [EJS](https://ejs.co/) - Motor de plantillas
 
+
+### Premium Code Bot
+
+https://github.com/em4nu3i69dll/pepe-discord-bot-panel
