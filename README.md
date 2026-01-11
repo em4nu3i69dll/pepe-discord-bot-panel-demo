@@ -78,3 +78,4 @@ Desarrollado con:
 ### Premium Code Bot
 
 https://github.com/em4nu3i69dll/pepe-discord-bot-panel
+https://pepe.em4nu3l69dll.dev/login
