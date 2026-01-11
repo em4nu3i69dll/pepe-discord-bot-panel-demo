@@ -6,8 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenidas - <%= servidor.name %></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/comun/sidebar.css">
+    <link rel="stylesheet" href="/css/comun/scrollbar.css">
     <link rel="stylesheet" href="/css/bienvenida/bienvenida.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <%- include('../parciales/alertas') %>
+    <style>
+        .tabla-variables { margin-top:8px; font-size:12px; }
+        .tabla-variables .fila-variable { display:flex; align-items:center; gap:12px; padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.06); }
+        .tabla-variables .descripcion-variable { color:#9aa0a6; white-space:nowrap; flex:1; }
+        .tabla-variables .codigos-variable { display:flex; gap:6px; white-space:nowrap; }
+        .tabla-variables code { background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); padding:2px 6px; border-radius:6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; color:#e6e6e6; }
+        .grupo-formulario input[type="text"],
+        .grupo-formulario input[type="color"]:not(.selector-color),
+        .grupo-formulario select,
+        .grupo-formulario textarea {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            display: block;
+        }
+        .grupo-formulario textarea { min-height: 110px; resize: vertical; }
+        .contenedor-interruptor { display: flex; align-items: center; gap: 15px; }
+        .oculto { display: none; }
+    </style>
 </head>
 <body>
     <div class="background-layer">
@@ -16,13 +38,23 @@
                 <div class="mosaic-item"></div>
             <% } %>
         </div>
+        <div class="background-overlay"></div>
     </div>
 
     <%- include('../parciales/barra-lateral', { pagina: 'bienvenida', usuario: usuario, servidor: servidor }) %>
 
     <main class="main-content">
-        <header class="main-header glass-card">
-            <img src="https://cdn.discordapp.com/icons/<%= servidor.id %>/<%= servidor.icon %>.png" class="server-icon" onerror="this.onerror=null; this.src='https://cdn.discordapp.com/embed/avatars/0.png';">
+        <header class="main-header">
+            <% if (servidor.icon) { %>
+                <img src="https://cdn.discordapp.com/icons/<%= servidor.id %>/<%= servidor.icon %>.png" class="server-icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="server-icon-placeholder" style="display: none;">
+                    <%= servidor.name.substring(0, 2).toUpperCase() %>
+                </div>
+            <% } else { %>
+                <div class="server-icon-placeholder">
+                    <%= servidor.name.substring(0, 2).toUpperCase() %>
+                </div>
+            <% } %>
             <div class="server-header-info">
                 <h1><i class="fas fa-door-open"></i> Configuración de Bienvenidas</h1>
                 <p>Personaliza los mensajes de bienvenida y autoroles para tu servidor.</p>
@@ -31,87 +63,134 @@
 
         <section class="settings-content">
             <form method="POST" action="/bienvenida/<%= servidor.id %>">
-                <div class="settings-card">
-                    <h3>
-                        <i class="fas fa-hashtag"></i>
-                        Mensajes de Bienvenida
-                    </h3>
-                    
-                    <div class="toggle-switch-wrapper">
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="bienvenida-habilitada" name="bienvenida_habilitada" <%= config && config.bienvenida_habilitada ? 'checked' : '' %>>
-                            <span class="slider"></span>
-                        </label>
-                        <label for="bienvenida-habilitada" style="margin-left: 10px; font-weight: 600; color: #fff; cursor: pointer;">Habilitar mensajes de bienvenida</label>
-                    </div>
-
-                    <div id="bienvenida-opciones" class="<%= config && config.bienvenida_habilitada ? '' : 'hidden' %>">
-                        <div class="form-group">
-                            <label for="canal-bienvenida">Canal</label>
-                            <select id="canal-bienvenida" name="canal_bienvenida_id" class="select-canal" required>
-                                <option value="" disabled <%= !config || !config.canal_bienvenida_id ? 'selected' : '' %>>Seleccionar canal</option>
-                                <% canales.forEach(canal => { %>
-                                    <option value="<%= canal.id %>" <%= config && config.canal_bienvenida_id === canal.id ? 'selected' : '' %>># <%= canal.name %></option>
-                                <% }); %>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="mensaje-bienvenida">Mensaje de Bienvenida</label>
-                            <textarea id="mensaje-bienvenida" name="mensaje_bienvenida" placeholder="¡Bienvenido {usuario} al servidor {servidor}!"><%= config && config.mensaje_bienvenida ? config.mensaje_bienvenida : '' %></textarea>
-                            <small>Variables disponibles: {usuario}, {nombre}, {servidor}, {miembros}</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Embed de Bienvenida (Opcional)</label>
-                            <input type="text" name="embed_titulo" placeholder="Título" value="<%= config && config.embed_bienvenida ? JSON.parse(config.embed_bienvenida).titulo || '' : '' %>">
-                            <textarea name="embed_descripcion" placeholder="Descripción..." style="margin-top: 10px;"><%= config && config.embed_bienvenida ? JSON.parse(config.embed_bienvenida).descripcion || '' : '' %></textarea>
-                            <input type="color" name="embed_color" value="<%= config && config.embed_bienvenida ? JSON.parse(config.embed_bienvenida).color || '#5865F2' : '#5865F2' %>" style="margin-top: 10px;">
-                        </div>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                        <div class="toggle-switch-wrapper">
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="autorol-habilitado" name="autorol_habilitado" <%= config && config.autorol_habilitado ? 'checked' : '' %>>
-                                <span class="slider"></span>
+                <div class="tarjeta-configuracion">
+                    <div class="tarjeta-configuracion" style="margin: 0; background: rgba(88, 101, 242, 0.05); border: 1px solid rgba(88, 101, 242, 0.2); padding: 1.5rem;">
+                        <div class="contenedor-interruptor" style="margin-bottom: 1.5rem; margin-top: 0; display: flex; align-items: center; gap: 15px;">
+                            <label class="interruptor">
+                                <input type="checkbox" id="bienvenida-habilitada" name="bienvenida_habilitada" <%= config && (config.bienvenida_habilitada === 1 || config.bienvenida_habilitada === true) ? 'checked' : '' %>>
+                                <span class="deslizador"></span>
                             </label>
-                            <label for="autorol-habilitado" style="margin-left: 10px; font-weight: 600; color: #fff; cursor: pointer;">Asignar roles automáticamente</label>
+                            <h4 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: #fff; flex: 1;">Mensajes de Bienvenida</h4>
                         </div>
-                        <div id="autorol-opciones" class="<%= config && config.autorol_habilitado ? '' : 'hidden' %>">
-                            <p style="color: #aaa; margin-bottom: 15px; font-size: 14px;">Los roles seleccionados se asignarán automáticamente a los nuevos miembros.</p>
-                            <div class="roles-container">
-                                <% if (roles && roles.length > 0) { %>
-                                    <div class="roles-grid">
-                                        <% roles.forEach(rol => { %>
-                                            <% 
-                                                const estaSeleccionado = config && config.roles_auto && 
-                                                    Array.isArray(JSON.parse(config.roles_auto)) && 
-                                                    JSON.parse(config.roles_auto).some(r => String(r) === String(rol.id));
-                                            %>
-                                            <div class="role-item">
-                                                <input type="checkbox"
-                                                       name="roles_auto[]"
-                                                       value="<%= rol.id %>"
-                                                       <%= estaSeleccionado ? 'checked' : '' %>
-                                                       id="role-<%= rol.id %>">
-                                                <label for="role-<%= rol.id %>" class="role-label">
-                                                    <span class="role-name" style="color: <%= rol.color !== 0 ? '#' + rol.color.toString(16).padStart(6, '0') : '#99aab5' %>"><%= rol.name %></span>
-                                                </label>
-                                            </div>
-                                        <% }); %>
+                        <div id="opciones-bienvenida" class="<%= config && (config.bienvenida_habilitada === 1 || config.bienvenida_habilitada === true) ? '' : 'oculto' %>">
+                            <div class="grupo-formulario" style="background: rgba(88, 101, 242, 0.08); padding: 15px; border-radius: 8px; margin-bottom: 20px; border:1px solid rgba(88,101,242,0.2);">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                    <i class="fas fa-info-circle" style="color: #5865f2;"></i>
+                                    <strong style="color: #fff;">Información importante</strong>
+                                </div>
+                                <p style="color: #caccce; margin: 0; font-size: 14px; line-height: 1.5;">
+                                    • Este mensaje se envía en el <strong>canal seleccionado</strong>
+                                </p>
+                                <div class="tabla-variables">
+                                    <div class="fila-variable"><span class="descripcion-variable">Mencionar al usuario</span><code>{mention}</code></div>
+                                    <div class="fila-variable"><span class="descripcion-variable">Nombre del usuario</span><span class="codigos-variable"><code>{user}</code><code>{user.name}</code></span></div>
+                                    <div class="fila-variable"><span class="descripcion-variable">Tag del usuario</span><code>{user.tag}</code></div>
+                                    <div class="fila-variable"><span class="descripcion-variable">ID del usuario</span><code>{user.id}</code></div>
+                                    <div class="fila-variable"><span class="descripcion-variable">Nombre del servidor</span><span class="codigos-variable"><code>{server}</code><code>{server.name}</code></span></div>
+                                    <div class="fila-variable"><span class="descripcion-variable">ID del servidor</span><code>{server.id}</code></div>
+                                    <div class="fila-variable"><span class="descripcion-variable">Miembros del servidor</span><code>{server.member_count}</code></div>
+                                    <div class="fila-variable"><span class="descripcion-variable">Owner del servidor</span><code>{owner.mention}</code></div>
+                                    <div class="fila-variable"><span class="descripcion-variable">Fecha local</span><code>{date}</code></div>
+                                    <div class="fila-variable"><span class="descripcion-variable">Avatar del usuario (thumbnail.url)</span><code>{user_avatar}</code></div>
+                                </div>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label for="canal-bienvenida">Canal</label>
+                                <select id="canal-bienvenida" name="canal_bienvenida_id">
+                                    <option value="">Seleccionar canal</option>
+                                    <% canales.forEach(canal => { %>
+                                        <option value="<%= canal.id %>" <%= config && config.canal_bienvenida_id === canal.id ? 'selected' : '' %>><%-canal.name %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                                <div>
+                                    <div class="grupo-formulario">
+                                        <label>Embed de Bienvenida</label>
+                                        <input type="text" id="embed_titulo" name="embed_titulo" placeholder="Título" value="<%= config && config.embed_bienvenida ? (typeof config.embed_bienvenida === 'string' ? JSON.parse(config.embed_bienvenida).titulo : config.embed_bienvenida.titulo) || '' : '' %>">
+                                        <textarea id="embed_descripcion" name="embed_descripcion" placeholder="Descripción..." style="margin-top: 10px;"><%= config && config.embed_bienvenida ? (typeof config.embed_bienvenida === 'string' ? JSON.parse(config.embed_bienvenida).descripcion : config.embed_bienvenida.descripcion) || '' : '' %></textarea>
+                                        <input type="text" id="embed_thumbnail" name="embed_thumbnail" placeholder="URL de la Miniatura" value="<%= config && config.embed_bienvenida ? (typeof config.embed_bienvenida === 'string' ? (JSON.parse(config.embed_bienvenida).thumbnail ? JSON.parse(config.embed_bienvenida).thumbnail.url : '') : (config.embed_bienvenida.thumbnail ? config.embed_bienvenida.thumbnail.url : '')) || '' : '' %>" style="margin-top: 10px;">
+                                        <input type="text" id="embed_imagen" name="embed_imagen" placeholder="URL de la Imagen Principal" value="<%= config && config.embed_bienvenida ? (typeof config.embed_bienvenida === 'string' ? (JSON.parse(config.embed_bienvenida).imagen ? JSON.parse(config.embed_bienvenida).imagen.url : '') : (config.embed_bienvenida.imagen ? config.embed_bienvenida.imagen.url : '')) || '' : '' %>" style="margin-top: 10px;">
+                                        <input type="text" id="embed_footer" name="embed_footer" placeholder="Texto del Pie de Página" value="<%= config && config.embed_bienvenida ? (typeof config.embed_bienvenida === 'string' ? (JSON.parse(config.embed_bienvenida).footer ? JSON.parse(config.embed_bienvenida).footer.text : '') : (config.embed_bienvenida.footer ? config.embed_bienvenida.footer.text : '')) || '' : '' %>" style="margin-top: 10px;">
+                                        <div style="margin-top: 10px; display: flex; align-items: center; gap: 12px;">
+                                            <label style="margin: 0; font-weight: 600; color: var(--color-texto); white-space: nowrap;">Color del Embed:</label>
+                                            <input type="color" id="embed_color" name="embed_color" value="<%= config && config.embed_bienvenida ? (typeof config.embed_bienvenida === 'string' ? JSON.parse(config.embed_bienvenida).color : config.embed_bienvenida.color) || '#5865F2' : '#5865F2' %>" class="selector-color">
+                                        </div>
                                     </div>
-                                <% } else { %>
-                                    <p class="no-roles-message">No hay roles disponibles.</p>
-                                <% } %>
+                                </div>
+                                <div class="contenedor-vista-previa-embed">
+                                    <h3>Vista Previa</h3>
+                                    <div class="vista-previa-embed">
+                                        <div class="embed-discord" id="vista-previa-bienvenida">
+                                            <div class="barra-lateral-embed"></div>
+                                            <div class="contenido-embed">
+                                                <div class="seccion-titulo"></div>
+                                                <div class="seccion-descripcion">
+                                                    <img src="" alt="" class="imagen-miniatura" style="display: none;">
+                                                </div>
+                                                <img src="" alt="" class="imagen-principal" style="display: none;">
+                                                <div class="seccion-pie" style="display: none;">
+                                                    <span class="texto-pie"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grupo-formulario" style="margin-top: 30px; border-top: 1px solid #444; padding-top: 20px;">
+                                <div class="contenedor-interruptor" style="margin-bottom: 15px; display: flex; align-items: center; gap: 15px;">
+                                    <label class="interruptor">
+                                        <input type="checkbox" id="autorol-habilitado" name="autorol_habilitado" <%= config && config.autorol_habilitado ? 'checked' : '' %>>
+                                        <span class="deslizador"></span>
+                                    </label>
+                                    <label for="autorol-habilitado" style="font-weight: 600; color: #fff; cursor: pointer; flex: 1;">Asignar roles automáticamente</label>
+                                </div>
+                                <div id="opciones-autorol" class="<%= config && config.autorol_habilitado ? '' : 'oculto' %>">
+                                    <p style="color: #aaa; margin-bottom: 15px; font-size: 14px;">Los roles seleccionados se asignarán automáticamente a los nuevos miembros que se unan al servidor.</p>
+                                    <h4 class="roles-section-title">Seleccionar Roles</h4>
+                                    <div class="roles-container">
+                                        <% if (roles && roles.length > 0) { %>
+                                            <div class="roles-grid">
+                                                <% roles.forEach(rol => { %>
+                                                    <% 
+                                                        let estaSeleccionado = false;
+                                                        if (config && config.roles_auto && Array.isArray(config.roles_auto) && config.roles_auto.length > 0) {
+                                                            const rolIdStr = String(rol.id);
+                                                            estaSeleccionado = config.roles_auto.some(r => String(r) === rolIdStr);
+                                                        }
+                                                        const puedeAsignar = typeof rol.puedeAsignar !== 'undefined' ? rol.puedeAsignar : true;
+                                                    %>
+                                                    <div class="role-item <%= !puedeAsignar ? 'role-item-bloqueado' : '' %>" style="--role-color: <%= rol.color !== 0 ? '#' + rol.color.toString(16).padStart(6, '0') : '#99aab5' %>">
+                                                        <input type="checkbox"
+                                                               class="role-checkbox"
+                                                               name="roles_auto[]"
+                                                               value="<%= rol.id %>"
+                                                               <%= estaSeleccionado ? 'checked' : '' %>
+                                                               <%= !puedeAsignar ? 'disabled' : '' %>
+                                                               id="role-<%= rol.id %>"
+                                                               style="width: 20px; height: 20px; min-width: 20px; min-height: 20px; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.1); border-radius: 4px; appearance: none; -webkit-appearance: none; -moz-appearance: none; display: block; opacity: 1; visibility: visible; position: relative; margin: 0; padding: 0; cursor: <%= !puedeAsignar ? 'not-allowed' : 'pointer' %>; flex-shrink: 0; pointer-events: <%= !puedeAsignar ? 'none' : 'auto' %>; z-index: 999; box-sizing: border-box;" onchange="this.style.background = this.checked ? '#22c55e' : 'rgba(255, 255, 255, 0.1)'; this.style.borderColor = this.checked ? '#22c55e' : 'rgba(255, 255, 255, 0.5)';">
+                                                        <label for="role-<%= rol.id %>" class="role-label" style="cursor: <%= !puedeAsignar ? 'not-allowed' : 'pointer' %>;">
+                                                            <span class="role-name" style="color: <%= rol.color !== 0 ? '#' + rol.color.toString(16).padStart(6, '0') : '#99aab5' %>; opacity: <%= !puedeAsignar ? '0.5' : '1' %>;"><%= rol.name %></span>
+                                                            <% if (!puedeAsignar) { %>
+                                                                <span class="role-bloqueado-badge" style="margin-left: 8px; font-size: 0.75rem; color: #ef4444; opacity: 0.8;">
+                                                                    <i class="fas fa-lock"></i> Bloqueado
+                                                                </span>
+                                                            <% } %>
+                                                        </label>
+                                                    </div>
+                                                <% }); %>
+                                            </div>
+                                        <% } else { %>
+                                            <p class="no-roles-message">No hay roles disponibles para asignar automáticamente.</p>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+                                <button type="submit" class="btn-modern btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
                             </div>
                         </div>
-                    </div>
-
-                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-                        <button type="submit" class="btn-modern btn-primary">
-                            <i class="fa-solid fa-floppy-disk"></i> Guardar
-                        </button>
                     </div>
                 </div>
             </form>
@@ -120,20 +199,236 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const bienvenidaHabilitada = document.getElementById('bienvenida-habilitada');
-            const bienvenidaOpciones = document.getElementById('bienvenida-opciones');
-            const autorolHabilitado = document.getElementById('autorol-habilitado');
-            const autorolOpciones = document.getElementById('autorol-opciones');
+            const interruptorBienvenida = document.getElementById('bienvenida-habilitada');
+            const opcionesBienvenida = document.getElementById('opciones-bienvenida');
+            const interruptorAutorol = document.getElementById('autorol-habilitado');
+            const opcionesAutorol = document.getElementById('opciones-autorol');
 
-            bienvenidaHabilitada.addEventListener('change', () => {
-                bienvenidaOpciones.classList.toggle('hidden', !bienvenidaHabilitada.checked);
+            interruptorBienvenida.addEventListener('change', () => {
+                opcionesBienvenida.classList.toggle('oculto', !interruptorBienvenida.checked);
             });
 
-            autorolHabilitado.addEventListener('change', () => {
-                autorolOpciones.classList.toggle('hidden', !autorolHabilitado.checked);
+            interruptorAutorol.addEventListener('change', () => {
+                opcionesAutorol.classList.toggle('oculto', !interruptorAutorol.checked);
             });
+
+            document.querySelectorAll('input.role-checkbox, input[name="roles_auto[]"]').forEach(casillaVerificacion => {
+                if (casillaVerificacion.disabled) {
+                    casillaVerificacion.checked = false;
+                    casillaVerificacion.style.opacity = '0.5';
+                    casillaVerificacion.style.cursor = 'not-allowed';
+                } else {
+                    if (casillaVerificacion.checked) {
+                        casillaVerificacion.style.background = '#22c55e';
+                        casillaVerificacion.style.borderColor = '#22c55e';
+                    } else {
+                        casillaVerificacion.style.background = 'rgba(255, 255, 255, 0.1)';
+                        casillaVerificacion.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                    }
+                }
+                
+                casillaVerificacion.addEventListener('change', function() {
+                    if (this.disabled) {
+                        this.checked = false;
+                        return;
+                    }
+                    if (this.checked) {
+                        this.style.background = '#22c55e';
+                        this.style.borderColor = '#22c55e';
+                    } else {
+                        this.style.background = 'rgba(255, 255, 255, 0.1)';
+                        this.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                    }
+                });
+            });
+
+            function procesarMarkdownDiscord(texto) {
+                if (!texto) return '';
+                
+                let resultado = texto;
+                const codigoPlaceholders = [];
+                let placeholderIndex = 0;
+                
+                resultado = resultado.replace(/```([\s\S]*?)```/g, (match, contenido) => {
+                    const placeholder = `__CODIGO_BLOQUE_${placeholderIndex}__`;
+                    codigoPlaceholders[placeholderIndex] = `<pre><code>${contenido.replace(/\n/g, '<br>')}</code></pre>`;
+                    placeholderIndex++;
+                    return placeholder;
+                });
+                
+                resultado = resultado.replace(/`([^`\n]+)`/g, (match, contenido) => {
+                    const placeholder = `__CODIGO_INLINE_${placeholderIndex}__`;
+                    codigoPlaceholders[placeholderIndex] = `<code>${contenido}</code>`;
+                    placeholderIndex++;
+                    return placeholder;
+                });
+                
+                resultado = resultado.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+                resultado = resultado.replace(/___([^_]+)___/g, '<strong><em>$1</em></strong>');
+                
+                resultado = resultado.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                resultado = resultado.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+                
+                resultado = resultado.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+                resultado = resultado.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+                
+                resultado = resultado.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+                
+                for (let i = 0; i < placeholderIndex; i++) {
+                    resultado = resultado.replace(`__CODIGO_BLOQUE_${i}__`, codigoPlaceholders[i]);
+                    resultado = resultado.replace(`__CODIGO_INLINE_${i}__`, codigoPlaceholders[i]);
+                }
+                
+                resultado = resultado.replace(/\n/g, '<br>');
+                
+                return resultado;
+            }
+
+            function reemplazarVariables(texto) {
+                if (!texto) return '';
+                return texto
+                    .replace(/\{mention\}/g, '@Usuario')
+                    .replace(/\{user\}/g, 'Usuario')
+                    .replace(/\{user\.name\}/g, 'Usuario')
+                    .replace(/\{user\.tag\}/g, 'Usuario#1234')
+                    .replace(/\{user\.id\}/g, '123456789012345678')
+                    .replace(/\{server\}/g, '<%= servidor.name %>')
+                    .replace(/\{server\.name\}/g, '<%= servidor.name %>')
+                    .replace(/\{server\.id\}/g, '<%= servidor.id %>')
+                    .replace(/\{server\.member_count\}/g, '100')
+                    .replace(/\{owner\.mention\}/g, '@Owner')
+                    .replace(/\{date\}/g, new Date().toLocaleDateString('es-ES'))
+                    .replace(/\{user_avatar\}/g, 'https://cdn.discordapp.com/avatars/123456789012345678/avatar.png');
+            }
+
+            function actualizarVistaPrevia(previewId, tituloId, descripcionId, colorId, thumbnailId, imagenId, footerId) {
+                const preview = document.getElementById(previewId);
+                if (!preview) return;
+
+                const tituloInput = document.getElementById(tituloId);
+                const descripcionInput = document.getElementById(descripcionId);
+                const colorInput = document.getElementById(colorId);
+                const thumbnailInput = document.getElementById(thumbnailId);
+                const imagenInput = document.getElementById(imagenId);
+                const footerInput = document.getElementById(footerId);
+
+                if (!tituloInput || !descripcionInput || !colorInput) return;
+
+                const datos = {
+                    titulo: tituloInput.value || '',
+                    descripcion: descripcionInput.value || '',
+                    color: colorInput.value || '#5865F2',
+                    thumbnail: thumbnailInput?.value || '',
+                    imagen: imagenInput?.value || '',
+                    footer: footerInput?.value || ''
+                };
+
+                const sidebar = preview.querySelector('.barra-lateral-embed');
+                const tituloEl = preview.querySelector('.seccion-titulo');
+                const descEl = preview.querySelector('.seccion-descripcion');
+                const mainImg = preview.querySelector('.imagen-principal');
+                const thumbImg = preview.querySelector('.imagen-miniatura');
+                const footerEl = preview.querySelector('.seccion-pie');
+                const footerText = preview.querySelector('.texto-pie');
+
+                if (sidebar) {
+                    sidebar.style.backgroundColor = datos.color;
+                }
+
+                if (tituloEl) {
+                    if (datos.titulo) {
+                        const tituloProcesado = procesarMarkdownDiscord(reemplazarVariables(datos.titulo));
+                        tituloEl.innerHTML = `<div class="titulo-embed">${tituloProcesado}</div>`;
+                        tituloEl.style.display = 'block';
+                    } else {
+                        tituloEl.style.display = 'none';
+                    }
+                }
+
+                if (descEl) {
+                    if (datos.descripcion) {
+                        const descripcionProcesada = procesarMarkdownDiscord(reemplazarVariables(datos.descripcion));
+                        const descripcionDiv = descEl.querySelector('.descripcion-embed') || document.createElement('div');
+                        descripcionDiv.className = 'descripcion-embed';
+                        descripcionDiv.innerHTML = descripcionProcesada;
+                        if (!descEl.querySelector('.descripcion-embed')) {
+                            descEl.appendChild(descripcionDiv);
+                        }
+                        descEl.style.display = 'block';
+                        descEl.style.position = 'relative';
+                        
+                        if (datos.thumbnail) {
+                            if (!descEl.querySelector('.imagen-miniatura')) {
+                                const thumb = document.createElement('img');
+                                thumb.className = 'imagen-miniatura';
+                                descEl.appendChild(thumb);
+                            }
+                            const thumb = descEl.querySelector('.imagen-miniatura');
+                            thumb.src = datos.thumbnail;
+                            thumb.style.display = 'block';
+                            thumb.style.position = 'absolute';
+                            thumb.style.right = '0';
+                            thumb.style.top = '0';
+                            thumb.style.zIndex = '1';
+                            thumb.style.maxHeight = '80px';
+                            thumb.onerror = () => { thumb.style.display = 'none'; };
+                            descripcionDiv.style.paddingRight = '100px';
+                        } else {
+                            if (thumbImg) {
+                                thumbImg.style.display = 'none';
+                            }
+                            const descripcionDiv = descEl.querySelector('.descripcion-embed');
+                            if (descripcionDiv) {
+                                descripcionDiv.style.paddingRight = '0';
+                            }
+                        }
+                    } else {
+                        descEl.style.display = 'none';
+                        if (thumbImg) thumbImg.style.display = 'none';
+                    }
+                }
+
+                if (mainImg) {
+                    if (datos.imagen) {
+                        mainImg.src = datos.imagen;
+                        mainImg.style.display = 'block';
+                        mainImg.style.maxWidth = '100%';
+                        mainImg.style.width = '100%';
+                        mainImg.style.height = 'auto';
+                        mainImg.style.borderRadius = '4px';
+                        mainImg.style.marginTop = '0.75rem';
+                        mainImg.style.clear = 'both';
+                        mainImg.style.position = 'relative';
+                        mainImg.style.zIndex = '0';
+                        mainImg.onerror = () => { mainImg.style.display = 'none'; };
+                    } else {
+                        mainImg.style.display = 'none';
+                    }
+                }
+
+                if (footerEl && footerText) {
+                    if (datos.footer) {
+                        footerText.textContent = reemplazarVariables(datos.footer);
+                        footerEl.style.display = 'flex';
+                    } else {
+                        footerEl.style.display = 'none';
+                    }
+                }
+            }
+
+            const inputsBienvenida = ['embed_titulo', 'embed_descripcion', 'embed_color', 'embed_thumbnail', 'embed_imagen', 'embed_footer'];
+            inputsBienvenida.forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.addEventListener('input', () => actualizarVistaPrevia('vista-previa-bienvenida', 'embed_titulo', 'embed_descripcion', 'embed_color', 'embed_thumbnail', 'embed_imagen', 'embed_footer'));
+                    input.addEventListener('change', () => actualizarVistaPrevia('vista-previa-bienvenida', 'embed_titulo', 'embed_descripcion', 'embed_color', 'embed_thumbnail', 'embed_imagen', 'embed_footer'));
+                }
+            });
+
+            setTimeout(() => {
+                actualizarVistaPrevia('vista-previa-bienvenida', 'embed_titulo', 'embed_descripcion', 'embed_color', 'embed_thumbnail', 'embed_imagen', 'embed_footer');
+            }, 100);
         });
     </script>
 </body>
 </html>
-

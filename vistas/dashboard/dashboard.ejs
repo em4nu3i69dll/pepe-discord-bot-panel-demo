@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Pepe Demo</title>
+    <title>Dashboard - Pepe</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/comun/sidebar.css">
+    <link rel="stylesheet" href="/css/comun/scrollbar.css">
     <link rel="stylesheet" href="/css/dashboard/dashboard.css">
+    <%- include('../parciales/alertas') %>
 </head>
 <body class="dashboard-page">
     <div class="background-layer">
@@ -37,7 +40,16 @@
                 <% servidores.forEach(servidor => { %>
                     <div class="server-card glass-card">
                         <div class="card-header">
-                            <img src="<%= servidor.icon ? `https://cdn.discordapp.com/icons/${servidor.id}/${servidor.icon}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png' %>" alt="Icono del Servidor" class="server-icon" onerror="this.onerror=null; this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                            <% if (servidor.icon) { %>
+                                <img src="https://cdn.discordapp.com/icons/<%= servidor.id %>/<%= servidor.icon %>.png" alt="Icono del Servidor" class="server-icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="server-icon-placeholder" style="display: none;">
+                                    <%= servidor.name.substring(0, 2).toUpperCase() %>
+                                </div>
+                            <% } else { %>
+                                <div class="server-icon-placeholder">
+                                    <%= servidor.name.substring(0, 2).toUpperCase() %>
+                                </div>
+                            <% } %>
                             <% if (servidor.owner) { %>
                                 <div class="badge badge-owner" title="Dueño"><i class="fas fa-crown"></i></div>
                             <% } else if (servidor.permissions && (servidor.permissions & 0x8) === 0x8) { %>
@@ -74,4 +86,3 @@
     </main>
 </body>
 </html>
-

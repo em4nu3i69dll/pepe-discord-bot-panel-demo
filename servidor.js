@@ -17,7 +17,6 @@ if (!fs.existsSync(rutaBaseDatos)) {
 const archivoBaseDatos = path.join(rutaBaseDatos, 'base-datos.db');
 const baseDatos = new sqlite3.Database(archivoBaseDatos, (err) => {
     if (err) {
-        console.error('[SERVIDOR] Error abriendo base de datos:', err.message);
         return;
     }
 
@@ -26,7 +25,6 @@ const baseDatos = new sqlite3.Database(archivoBaseDatos, (err) => {
         const esquema = fs.readFileSync(rutaEsquema, 'utf8');
         baseDatos.exec(esquema, (err) => {
             if (err && !err.message.includes('already exists')) {
-                console.error('[SERVIDOR] Error creando tablas:', err.message);
             }
         });
     }
@@ -93,14 +91,10 @@ passport.use(new DiscordStrategy({
                actualizado_en=CURRENT_TIMESTAMP`,
             [perfil.id, perfil.username, perfil.avatar, perfil.discriminator, perfil.email],
             (err) => {
-                if (err) {
-                    console.error('[OAUTH] Error guardando usuario:', err.message);
-                }
             }
         );
         return hecho(null, perfil);
     } catch (e) {
-        console.error('[OAUTH] Error en callback:', e.message);
         return hecho(e, null);
     }
 }));
@@ -110,9 +104,6 @@ app.use('/publico', express.static(path.join(__dirname, 'publico')));
 
 app.get('/logout', (req, res) => {
     req.logout((err) => {
-        if (err) {
-            console.error('[SERVIDOR] Error en logout:', err.message);
-        }
         res.redirect('/login');
     });
 });
@@ -122,6 +113,5 @@ rutas(app, passport, baseDatos, bot);
 
 const puerto = process.env.PUERTO || 3000;
 app.listen(puerto, () => {
-    console.log(`[SERVIDOR] Escuchando en puerto ${puerto}`);
 });
 

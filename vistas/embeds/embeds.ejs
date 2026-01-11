@@ -6,8 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Constructor de Embeds - <%= servidor.name %></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/comun/sidebar.css">
+    <link rel="stylesheet" href="/css/comun/scrollbar.css">
     <link rel="stylesheet" href="/css/embeds/embeds.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <%- include('../parciales/alertas') %>
 </head>
 <body>
     <div class="background-layer">
@@ -16,13 +19,23 @@
                 <div class="mosaic-item"></div>
             <% } %>
         </div>
+        <div class="background-overlay"></div>
     </div>
 
     <%- include('../parciales/barra-lateral', { pagina: 'embeds', usuario: usuario, servidor: servidor }) %>
 
     <main class="main-content">
-        <header class="main-header glass-card">
-            <img src="https://cdn.discordapp.com/icons/<%= servidor.id %>/<%= servidor.icon %>.png" class="server-icon" onerror="this.onerror=null; this.src='https://cdn.discordapp.com/embed/avatars/0.png';">
+        <header class="main-header">
+            <% if (servidor.icon) { %>
+                <img src="https://cdn.discordapp.com/icons/<%= servidor.id %>/<%= servidor.icon %>.png" class="server-icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="server-icon-placeholder" style="display: none;">
+                    <%= servidor.name.substring(0, 2).toUpperCase() %>
+                </div>
+            <% } else { %>
+                <div class="server-icon-placeholder">
+                    <%= servidor.name.substring(0, 2).toUpperCase() %>
+                </div>
+            <% } %>
             <div class="server-header-info">
                 <h1><i class="fas fa-paint-brush"></i> Constructor de Embeds</h1>
                 <p>Crea y envía embeds personalizados a tu servidor.</p>
@@ -30,12 +43,12 @@
         </header>
 
         <section class="settings-content">
-            <div class="builder-wrapper">
-                <div class="embed-form-container">
-                    <form id="embed-form">
-                        <div class="form-group">
+            <div class="contenedor-constructor">
+                <div class="contenedor-formulario-embed">
+                    <form id="formulario-embed">
+                        <div class="grupo-formulario">
                             <label for="canal-id">Canal de destino:</label>
-                            <select name="canal_id" id="canal-id" class="input-field select-canal" required>
+                            <select name="canal_id" id="canal-id" class="campo-entrada seleccionar-canal" required>
                                 <option value="" disabled selected>Selecciona un canal...</option>
                                 <% canales.forEach(canal => { %>
                                     <option value="<%= canal.id %>"># <%= canal.name %></option>
@@ -43,71 +56,63 @@
                             </select>
                         </div>
 
-                        <div class="form-section">
+                        <div class="seccion-formulario">
                             <h3>Contenido Principal</h3>
-                            <div class="form-group">
+                            <div class="grupo-formulario">
                                 <label for="titulo">Título:</label>
-                                <input type="text" name="titulo" id="titulo" class="input-field" maxlength="256" placeholder="Título del embed..." value="¡Bienvenido al Constructor de Embeds!">
+                                <input type="text" name="titulo" id="titulo" class="campo-entrada" maxlength="256" placeholder="Título del embed...">
                             </div>
-                            <div class="form-group">
+                            <div class="grupo-formulario">
                                 <label for="descripcion">Descripción:</label>
-                                <textarea name="descripcion" id="descripcion" class="input-field" maxlength="4096" rows="6" placeholder="Descripción del embed...">🎨 **¡Crea embeds increíbles con facilidad!**
-
-✨ Este es un ejemplo de embed precargado para que puedas ver todas las funciones disponibles.
-
-🔧 **Características:**
-• Vista previa en tiempo real
-• Personalización completa
-• Interfaz intuitiva
-
-¡Edita este contenido y ve los cambios al instante! 🚀</textarea>
+                                <textarea name="descripcion" id="descripcion" class="campo-entrada" maxlength="4096" rows="6" placeholder="Descripción del embed..."></textarea>
                             </div>
-                            <div class="form-group">
+                            <div class="grupo-formulario">
                                 <label for="color">Color:</label>
-                                <input type="color" name="color" id="color" class="input-field" value="#5865F2">
+                                <input type="color" name="color" id="color" class="campo-entrada" value="#5865F2">
                             </div>
                         </div>
 
-                        <div class="form-section">
+                        <div class="seccion-formulario">
                             <h3>Imágenes</h3>
-                            <div class="form-group">
+                            <div class="grupo-formulario">
                                 <label for="imagen-url">URL de la imagen principal:</label>
-                                <input type="url" name="imagen_url" id="imagen-url" class="input-field" placeholder="https://ejemplo.com/imagen.png" value="https://placehold.co/600x300/5865F2/FFFFFF?text=Imagen+Principal+del+Embed">
+                                <input type="url" name="imagen_url" id="imagen-url" class="campo-entrada" placeholder="https://ejemplo.com/imagen.png">
                             </div>
-                            <div class="form-group">
+                            <div class="grupo-formulario">
                                 <label for="thumbnail-url">URL de la miniatura:</label>
-                                <input type="url" name="thumbnail_url" id="thumbnail-url" class="input-field" placeholder="https://ejemplo.com/miniatura.png" value="https://placehold.co/600x300/5865F2/FFFFFF?text=M">
+                                <input type="url" name="thumbnail_url" id="thumbnail-url" class="campo-entrada" placeholder="https://ejemplo.com/miniatura.png">
                             </div>
                         </div>
 
-                        <div class="form-section">
+                        <div class="seccion-formulario">
                             <h3>Pie de página</h3>
-                            <div class="form-group">
+                            <div class="grupo-formulario">
                                 <label for="footer-texto">Texto del pie:</label>
-                                <input type="text" name="footer_texto" id="footer-texto" class="input-field" maxlength="2048" placeholder="Texto del pie de página..." value="Constructor de Embeds • Creado por EM4NU3L69dll">
+                                <input type="text" name="footer_texto" id="footer-texto" class="campo-entrada" maxlength="2048" placeholder="Texto del pie de página...">
                             </div>
                         </div>
 
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Enviar Embed</button>
-                            <button type="reset" class="btn btn-secondary">Limpiar Formulario</button>
+                        <div class="acciones-formulario">
+                            <button type="submit" class="boton boton-primario">Enviar Embed</button>
+                            <button type="reset" class="boton boton-secundario">Limpiar Formulario</button>
                         </div>
                     </form>
                 </div>
-                <div class="embed-preview-container">
+                <div class="contenedor-vista-previa-embed">
                     <h3>Vista Previa</h3>
-                    <div class="embed-preview">
-                        <div class="discord-embed">
-                            <div class="embed-sidebar"></div>
-                            <div class="embed-content">
-                                <div class="title-section"></div>
-                                <div class="description-section"></div>
-                                <img src="" alt="" class="main-image" style="display: none;">
-                                <div class="footer-section" style="display: none;">
-                                    <span class="footer-text"></span>
+                    <div class="vista-previa-embed">
+                        <div class="embed-discord">
+                            <div class="barra-lateral-embed"></div>
+                            <div class="contenido-embed">
+                                <div class="seccion-titulo"></div>
+                                <div class="seccion-descripcion">
+                                    <img src="" alt="" class="imagen-miniatura" style="display: none;">
+                                </div>
+                                <img src="" alt="" class="imagen-principal" style="display: none;">
+                                <div class="seccion-pie" style="display: none;">
+                                    <span class="texto-pie"></span>
                                 </div>
                             </div>
-                            <img src="" alt="" class="thumbnail-image" style="display: none;">
                         </div>
                     </div>
                 </div>
@@ -115,15 +120,58 @@
         </section>
     </main>
 
+    <script src="/js/alertas.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('embed-form');
-            const preview = document.querySelector('.embed-preview');
+            const form = document.getElementById('formulario-embed');
+            const preview = document.querySelector('.vista-previa-embed');
             const inputs = form.querySelectorAll('input, textarea, select');
+            const servidorId = '<%= servidor.id %>';
+
+            function procesarMarkdownDiscord(texto) {
+                if (!texto) return '';
+                
+                let resultado = texto;
+                const codigoPlaceholders = [];
+                let placeholderIndex = 0;
+                
+                resultado = resultado.replace(/```([\s\S]*?)```/g, (match, contenido) => {
+                    const placeholder = `__CODIGO_BLOQUE_${placeholderIndex}__`;
+                    codigoPlaceholders[placeholderIndex] = `<pre><code>${contenido.replace(/\n/g, '<br>')}</code></pre>`;
+                    placeholderIndex++;
+                    return placeholder;
+                });
+                
+                resultado = resultado.replace(/`([^`\n]+)`/g, (match, contenido) => {
+                    const placeholder = `__CODIGO_INLINE_${placeholderIndex}__`;
+                    codigoPlaceholders[placeholderIndex] = `<code>${contenido}</code>`;
+                    placeholderIndex++;
+                    return placeholder;
+                });
+                
+                resultado = resultado.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+                resultado = resultado.replace(/___([^_]+)___/g, '<strong><em>$1</em></strong>');
+                
+                resultado = resultado.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                resultado = resultado.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+                
+                resultado = resultado.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+                resultado = resultado.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+                
+                resultado = resultado.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+                
+                for (let i = 0; i < placeholderIndex; i++) {
+                    resultado = resultado.replace(`__CODIGO_BLOQUE_${i}__`, codigoPlaceholders[i]);
+                    resultado = resultado.replace(`__CODIGO_INLINE_${i}__`, codigoPlaceholders[i]);
+                }
+                
+                resultado = resultado.replace(/\n/g, '<br>');
+                
+                return resultado;
+            }
 
             function actualizarVistaPrevia() {
                 if (!preview) {
-                    console.error('[EMBEDS] No se encontró el contenedor de vista previa');
                     return;
                 }
 
@@ -135,7 +183,6 @@
                 const footerInput = document.getElementById('footer-texto');
 
                 if (!tituloInput || !descripcionInput || !colorInput) {
-                    console.error('[EMBEDS] No se encontraron todos los inputs necesarios');
                     return;
                 }
 
@@ -148,53 +195,107 @@
                     footer: footerInput?.value || ''
                 };
 
-                const embed = preview.querySelector('.discord-embed');
+                const embed = preview.querySelector('.embed-discord');
                 if (!embed) {
-                    console.error('[EMBEDS] No se encontró el elemento embed');
                     return;
                 }
 
-                const sidebar = embed.querySelector('.embed-sidebar');
-                const titleSection = embed.querySelector('.title-section');
-                const descSection = embed.querySelector('.description-section');
-                const mainImage = embed.querySelector('.main-image');
-                const thumbnail = embed.querySelector('.thumbnail-image');
-                const footerSection = embed.querySelector('.footer-section');
-                const footerText = footerSection?.querySelector('.footer-text');
+                const contenidoEmbed = embed.querySelector('.contenido-embed');
+                if (!contenidoEmbed) {
+                    return;
+                }
+
+                const sidebar = embed.querySelector('.barra-lateral-embed');
+                const titleSection = embed.querySelector('.seccion-titulo');
+                const descSection = embed.querySelector('.seccion-descripcion');
+                let mainImage = contenidoEmbed.querySelector('.imagen-principal');
+                if (!mainImage) {
+                    mainImage = document.createElement('img');
+                    mainImage.className = 'imagen-principal';
+                    mainImage.alt = '';
+                    mainImage.style.display = 'none';
+                    const pieSection = contenidoEmbed.querySelector('.seccion-pie');
+                    if (pieSection) {
+                        contenidoEmbed.insertBefore(mainImage, pieSection);
+                    } else {
+                        contenidoEmbed.appendChild(mainImage);
+                    }
+                }
+                const thumbnail = descSection.querySelector('.imagen-miniatura');
+                const footerSection = contenidoEmbed.querySelector('.seccion-pie');
+                const footerText = footerSection?.querySelector('.texto-pie');
 
                 if (!sidebar || !titleSection || !descSection) {
-                    console.error('[EMBEDS] No se encontraron todos los elementos del embed');
                     return;
                 }
 
                 sidebar.style.backgroundColor = datos.color;
 
                 if (datos.titulo) {
-                    titleSection.innerHTML = `<div class="embed-title">${datos.titulo}</div>`;
+                    const tituloProcesado = procesarMarkdownDiscord(datos.titulo);
+                    titleSection.innerHTML = `<div class="titulo-embed">${tituloProcesado}</div>`;
                     titleSection.style.display = 'block';
                 } else {
                     titleSection.style.display = 'none';
                 }
 
                 if (datos.descripcion) {
-                    descSection.innerHTML = `<div class="embed-description">${datos.descripcion.replace(/\n/g, '<br>')}</div>`;
+                    const descripcionProcesada = procesarMarkdownDiscord(datos.descripcion);
+                    const descripcionDiv = descSection.querySelector('.descripcion-embed') || document.createElement('div');
+                    descripcionDiv.className = 'descripcion-embed';
+                    descripcionDiv.innerHTML = descripcionProcesada;
+                    if (!descSection.querySelector('.descripcion-embed')) {
+                        descSection.appendChild(descripcionDiv);
+                    }
                     descSection.style.display = 'block';
+                    descSection.style.position = 'relative';
+                    
+                    if (datos.thumbnail) {
+                        if (!descSection.querySelector('.imagen-miniatura')) {
+                            const thumbImg = document.createElement('img');
+                            thumbImg.className = 'imagen-miniatura';
+                            descSection.appendChild(thumbImg);
+                        }
+                        const thumb = descSection.querySelector('.imagen-miniatura');
+                        thumb.src = datos.thumbnail;
+                        thumb.style.display = 'block';
+                        thumb.style.position = 'absolute';
+                        thumb.style.right = '0';
+                        thumb.style.top = '0';
+                        thumb.style.zIndex = '1';
+                        thumb.style.maxHeight = '80px';
+                        thumb.style.width = '80px';
+                        thumb.style.borderRadius = '4px';
+                        thumb.onerror = () => { thumb.style.display = 'none'; };
+                        descripcionDiv.style.paddingRight = '100px';
+                    } else {
+                        if (thumbnail) {
+                            thumbnail.style.display = 'none';
+                        }
+                        const descripcionDiv = descSection.querySelector('.descripcion-embed');
+                        if (descripcionDiv) {
+                            descripcionDiv.style.paddingRight = '0';
+                        }
+                    }
                 } else {
                     descSection.style.display = 'none';
+                    if (thumbnail) thumbnail.style.display = 'none';
                 }
 
-                if (datos.imagen) {
+                if (datos.imagen && mainImage) {
                     mainImage.src = datos.imagen;
                     mainImage.style.display = 'block';
-                } else {
+                    mainImage.style.maxWidth = '100%';
+                    mainImage.style.width = '100%';
+                    mainImage.style.height = 'auto';
+                    mainImage.style.borderRadius = '4px';
+                    mainImage.style.marginTop = '0.75rem';
+                    mainImage.style.clear = 'both';
+                    mainImage.style.position = 'relative';
+                    mainImage.style.zIndex = '0';
+                    mainImage.onerror = () => { mainImage.style.display = 'none'; };
+                } else if (mainImage) {
                     mainImage.style.display = 'none';
-                }
-
-                if (datos.thumbnail) {
-                    thumbnail.src = datos.thumbnail;
-                    thumbnail.style.display = 'block';
-                } else {
-                    thumbnail.style.display = 'none';
                 }
 
                 if (datos.footer && footerText) {
@@ -211,7 +312,7 @@
             });
 
             function inicializarVistaPrevia() {
-                if (document.getElementById('titulo') && document.querySelector('.embed-preview')) {
+                if (document.getElementById('titulo') && document.querySelector('.vista-previa-embed')) {
                     actualizarVistaPrevia();
                 } else {
                     setTimeout(inicializarVistaPrevia, 100);
@@ -219,6 +320,13 @@
             }
 
             inicializarVistaPrevia();
+
+            form.querySelector('button[type="reset"]').addEventListener('click', (e) => {
+                e.preventDefault();
+                form.reset();
+                document.getElementById('color').value = '#5865F2';
+                actualizarVistaPrevia();
+            });
 
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -234,7 +342,7 @@
                 };
 
                 try {
-                    const respuesta = await fetch(`/embeds/<%= servidor.id %>/enviar`, {
+                    const respuesta = await fetch(`/embeds/${servidorId}/enviar`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -248,19 +356,18 @@
                     const resultado = await respuesta.json();
                     
                     if (resultado.exito) {
-                        alert('¡Embed enviado exitosamente!');
+                        mostrarAlerta('¡Embed enviado exitosamente!', 'exito');
                         form.reset();
+                        document.getElementById('color').value = '#5865F2';
                         actualizarVistaPrevia();
                     } else {
-                        alert('Error al enviar el embed: ' + (resultado.error || 'Error desconocido'));
+                        mostrarAlerta('Error al enviar el embed: ' + (resultado.error || 'Error desconocido'), 'error');
                     }
                 } catch (error) {
-                    console.error('Error:', error);
-                    alert('Error al enviar el embed');
+                    mostrarAlerta('Error al enviar el embed', 'error');
                 }
             });
         });
     </script>
 </body>
 </html>
-

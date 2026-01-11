@@ -13,7 +13,6 @@ async function obtenerServidoresConRetry(accessToken, maxIntentos = 3) {
         } catch (error) {
             if (error.response?.status === 429 && intento < maxIntentos) {
                 const retryAfter = error.response.data?.retry_after || 1;
-                console.log(`[RUTAS] Rate limit, esperando ${retryAfter}s antes del intento ${intento + 1}`);
                 await new Promise(resolve => setTimeout(resolve, (retryAfter * 1000) + 100));
                 continue;
             }
@@ -40,10 +39,6 @@ module.exports = function(app, passport, baseDatos, bot) {
             'SELECT total_servidores, total_usuarios, total_canales FROM estadisticas WHERE id = 1',
             [],
             (err, stats) => {
-                if (err) {
-                    console.error('[RUTAS] Error obteniendo estadísticas:', err.message);
-                }
-
                 const metrics = stats || { total_servidores: 0, total_usuarios: 0, total_canales: 0 };
                 
                 res.render('login/login', {
@@ -62,19 +57,15 @@ module.exports = function(app, passport, baseDatos, bot) {
 
     app.get('/auth/discord/callback', passport.authenticate('discord', {
         failureRedirect: '/login?error=autenticacion'
-    }), async (req, res) => {
+    }    ), async (req, res) => {
         if (!req.user || !req.user.accessToken) {
-            console.error('[RUTAS] Error: Usuario autenticado pero sin accessToken');
             return res.redirect('/login?error=sin_token');
         }
-        
-        console.log(`[RUTAS] Usuario ${req.user.id} autenticado correctamente`);
         
         await new Promise(resolve => setTimeout(resolve, 500));
         
         try {
             const servidores = await obtenerServidoresConRetry(req.user.accessToken);
-            console.log(`[RUTAS] Obtenidos ${servidores.length} servidores en callback`);
 
             const servidoresConPermisos = servidores.filter(servidor => {
                 const permisos = BigInt(servidor.permissions || 0);
@@ -98,27 +89,21 @@ module.exports = function(app, passport, baseDatos, bot) {
                 clientId: clientId
             });
         } catch (error) {
-            console.error('[RUTAS] Error obteniendo servidores en callback:', error.message);
             res.redirect('/dashboard');
         }
     });
 
     app.get('/dashboard', estaAutenticado, async (req, res) => {
         if (!req.user) {
-            console.error('[RUTAS] Usuario no autenticado');
             return res.redirect('/login');
         }
 
         if (!req.user.accessToken) {
-            console.error('[RUTAS] Usuario sin accessToken, redirigiendo a login');
             return res.redirect('/login');
         }
 
-        console.log(`[RUTAS] Obteniendo servidores para usuario ${req.user.id} (${req.user.username})`);
-
         try {
             const servidores = await obtenerServidoresConRetry(req.user.accessToken);
-            console.log(`[RUTAS] Obtenidos ${servidores.length} servidores para usuario ${req.user.id}`);
             
             const servidoresConPermisos = servidores.filter(servidor => {
                 const permisos = BigInt(servidor.permissions || 0);
@@ -126,8 +111,6 @@ module.exports = function(app, passport, baseDatos, bot) {
                 const puedeGestionar = (permisos & BigInt(0x20)) === BigInt(0x20);
                 return servidor.owner || esAdmin || puedeGestionar;
             });
-            
-            console.log(`[RUTAS] ${servidoresConPermisos.length} servidores con permisos de administrador o gestión`);
 
             const clientId = process.env.DISCORD_CLIENT_ID;
             const servidoresConInfo = servidoresConPermisos.map(servidor => {
@@ -144,13 +127,7 @@ module.exports = function(app, passport, baseDatos, bot) {
                 clientId: clientId
             });
         } catch (error) {
-            console.error('[RUTAS] Error obteniendo servidores:');
-            console.error('  Status:', error.response?.status);
-            console.error('  Data:', error.response?.data);
-            console.error('  Message:', error.message);
-            
             if (error.response?.status === 401) {
-                console.error('[RUTAS] Token expirado, redirigiendo a login');
                 return res.redirect('/login?error=token_expirado');
             }
             
@@ -162,164 +139,209 @@ module.exports = function(app, passport, baseDatos, bot) {
         }
     });
 
-    app.get('/bienvenida/:guildId', estaAutenticado, (req, res) => {
+    app.get('/bienvenida/:guildId', estaAutenticado, async (req, res) => {
         const guildId = req.params.guildId;
 
-        axios.get(`https://discord.com/api/v10/guilds/${guildId}`, {
-            headers: {
-                'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`
+        try {
+            const servidor = bot.cliente.guilds.cache.get(guildId);
+            if (!servidor) {
+                return res.redirect('/dashboard?error=servidor_no_encontrado');
             }
-        }).then(response => {
-            const servidor = response.data;
 
-            axios.get(`https://discord.com/api/v10/guilds/${guildId}/channels`, {
-                headers: {
-                    'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`
-                }
-            }).then(channelsResponse => {
-                const canales = channelsResponse.data.filter(c => c.type === 0);
+            const canales = servidor.channels.cache
+                .filter(c => c.type === 0)
+                .map(c => ({ id: c.id, name: c.name }));
 
-                axios.get(`https://discord.com/api/v10/guilds/${guildId}/roles`, {
-                    headers: {
-                        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`
+            const miembroBot = servidor.members.cache.get(bot.cliente.user.id);
+            const rolMasAltoBot = miembroBot ? miembroBot.roles.highest : null;
+            const posicionBot = rolMasAltoBot ? rolMasAltoBot.position : 0;
+            
+            const roles = servidor.roles.cache
+                .filter(r => r.id !== servidor.id && !r.managed)
+                .sort((a, b) => b.position - a.position)
+                .map(r => ({ 
+                    id: r.id, 
+                    name: r.name, 
+                    color: r.color, 
+                    position: r.position, 
+                    puedeAsignar: r.position < posicionBot 
+                }));
+
+            const servidorData = {
+                id: servidor.id,
+                name: servidor.name,
+                icon: servidor.icon
+            };
+
+            baseDatos.get(
+                'SELECT * FROM mensajes_bienvenida WHERE guild_id = ?',
+                [guildId],
+                (err, config) => {
+                    if (err) {
+                        return res.render('bienvenida/bienvenida', {
+                            usuario: req.user,
+                            servidor: servidorData,
+                            canales: canales,
+                            roles: roles,
+                            config: null
+                        });
                     }
-                }).then(rolesResponse => {
-                    const roles = rolesResponse.data.filter(r => !r.managed && r.name !== '@everyone');
 
-                    baseDatos.get(
-                        'SELECT * FROM mensajes_bienvenida WHERE guild_id = ?',
-                        [guildId],
-                        (err, config) => {
-                            if (err) {
-                                console.error('[RUTAS] Error obteniendo configuración:', err.message);
-                                return res.render('bienvenida/bienvenida', {
-                                    usuario: req.user,
-                                    servidor: servidor,
-                                    canales: canales,
-                                    roles: roles,
-                                    config: null
-                                });
-                            }
-
-                            res.render('bienvenida/bienvenida', {
-                                usuario: req.user,
-                                servidor: servidor,
-                                canales: canales,
-                                roles: roles,
-                                config: config || null
-                            });
+                    let configProcesada = config ? { ...config } : {};
+                    
+                    if (config && config.embed_bienvenida) {
+                        try {
+                            const embed = typeof config.embed_bienvenida === 'string' 
+                                ? JSON.parse(config.embed_bienvenida) 
+                                : config.embed_bienvenida;
+                            configProcesada.embed_bienvenida = {
+                                titulo: embed.title || embed.titulo || '',
+                                descripcion: embed.description || embed.descripcion || '',
+                                color: embed.color || '#5865F2',
+                                imagen: embed.image ? (embed.image.url || embed.image) : (embed.imagen ? (embed.imagen.url || embed.imagen) : null),
+                                thumbnail: embed.thumbnail ? (embed.thumbnail.url || embed.thumbnail) : null,
+                                footer: embed.footer ? (embed.footer.text || embed.footer) : null
+                            };
+                        } catch (e) {
+                            configProcesada.embed_bienvenida = {};
                         }
-                    );
-                }).catch(() => {
+                    }
+
+                    if (config && config.roles_auto) {
+                        try {
+                            const rolesParsed = typeof config.roles_auto === 'string' 
+                                ? JSON.parse(config.roles_auto) 
+                                : config.roles_auto;
+                            configProcesada.roles_auto = Array.isArray(rolesParsed) 
+                                ? rolesParsed.map(r => String(r))
+                                : [];
+                        } catch (e) {
+                            configProcesada.roles_auto = [];
+                        }
+                    } else {
+                        configProcesada.roles_auto = [];
+                    }
+
                     res.render('bienvenida/bienvenida', {
                         usuario: req.user,
-                        servidor: servidor,
+                        servidor: servidorData,
                         canales: canales,
-                        roles: [],
-                        config: null
+                        roles: roles,
+                        config: configProcesada || null
                     });
-                });
-            }).catch(() => {
-                res.render('bienvenida/bienvenida', {
-                    usuario: req.user,
-                    servidor: servidor,
-                    canales: [],
-                    roles: [],
-                    config: null
-                });
-            });
-        }).catch(() => {
+                }
+            );
+        } catch (error) {
             res.redirect('/dashboard?error=servidor_no_encontrado');
-        });
+        }
     });
 
-    app.post('/bienvenida/:guildId', estaAutenticado, (req, res) => {
+    app.post('/bienvenida/:guildId', estaAutenticado, async (req, res) => {
         const guildId = req.params.guildId;
         const {
             bienvenida_habilitada,
             canal_bienvenida_id,
-            mensaje_bienvenida,
-            embed_bienvenida,
+            embed_titulo,
+            embed_descripcion,
+            embed_color,
+            embed_thumbnail,
+            embed_imagen,
+            embed_footer,
             autorol_habilitado,
             roles_auto
         } = req.body;
 
-        const rolesSeleccionados = roles_auto ? (Array.isArray(roles_auto) ? roles_auto : [roles_auto]) : [];
-
-        baseDatos.run(
-            `INSERT INTO mensajes_bienvenida 
-             (guild_id, bienvenida_habilitada, canal_bienvenida_id, mensaje_bienvenida, embed_bienvenida, autorol_habilitado, roles_auto)
-             VALUES (?, ?, ?, ?, ?, ?, ?)
-             ON CONFLICT(guild_id) DO UPDATE SET
-               bienvenida_habilitada=excluded.bienvenida_habilitada,
-               canal_bienvenida_id=excluded.canal_bienvenida_id,
-               mensaje_bienvenida=excluded.mensaje_bienvenida,
-               embed_bienvenida=excluded.embed_bienvenida,
-               autorol_habilitado=excluded.autorol_habilitado,
-               roles_auto=excluded.roles_auto`,
-            [
-                guildId,
-                bienvenida_habilitada === 'on' ? 1 : 0,
-                canal_bienvenida_id || null,
-                mensaje_bienvenida || null,
-                embed_bienvenida ? JSON.stringify(embed_bienvenida) : null,
-                autorol_habilitado === 'on' ? 1 : 0,
-                rolesSeleccionados.length > 0 ? JSON.stringify(rolesSeleccionados) : null
-            ],
-            (err) => {
-                if (err) {
-                    console.error('[RUTAS] Error guardando configuración:', err.message);
-                    return res.redirect(`/bienvenida/${guildId}?error=error_guardar`);
-                }
-                res.redirect(`/bienvenida/${guildId}?exito=configuracion_guardada`);
+        try {
+            const servidor = bot.cliente.guilds.cache.get(guildId);
+            if (!servidor) {
+                return res.redirect('/dashboard?error=servidor_no_encontrado');
             }
-        );
+
+            const miembroBot = servidor.members.cache.get(bot.cliente.user.id);
+            const rolMasAltoBot = miembroBot ? miembroBot.roles.highest : null;
+            const posicionBot = rolMasAltoBot ? rolMasAltoBot.position : 0;
+
+            let rolesSeleccionados = roles_auto ? (Array.isArray(roles_auto) ? roles_auto : [roles_auto]) : [];
+            rolesSeleccionados = rolesSeleccionados
+                .map(r => String(r))
+                .filter(roleId => {
+                    const rol = servidor.roles.cache.get(roleId);
+                    return rol && rol.position < posicionBot;
+                });
+
+            const embedBienvenida = {
+                titulo: embed_titulo || null,
+                descripcion: embed_descripcion || null,
+                color: embed_color || '#5865F2',
+                thumbnail: embed_thumbnail ? { url: embed_thumbnail } : null,
+                imagen: embed_imagen ? { url: embed_imagen } : null,
+                footer: embed_footer ? { text: embed_footer } : null
+            };
+
+            baseDatos.run(
+                `INSERT INTO mensajes_bienvenida 
+                 (guild_id, bienvenida_habilitada, canal_bienvenida_id, embed_bienvenida, autorol_habilitado, roles_auto)
+                 VALUES (?, ?, ?, ?, ?, ?)
+                 ON CONFLICT(guild_id) DO UPDATE SET
+                   bienvenida_habilitada=excluded.bienvenida_habilitada,
+                   canal_bienvenida_id=excluded.canal_bienvenida_id,
+                   embed_bienvenida=excluded.embed_bienvenida,
+                   autorol_habilitado=excluded.autorol_habilitado,
+                   roles_auto=excluded.roles_auto`,
+                [
+                    guildId,
+                    bienvenida_habilitada === 'on' ? 1 : 0,
+                    canal_bienvenida_id || null,
+                    JSON.stringify(embedBienvenida),
+                    autorol_habilitado === 'on' ? 1 : 0,
+                    rolesSeleccionados.length > 0 ? JSON.stringify(rolesSeleccionados) : null
+                ],
+                (err) => {
+                    if (err) {
+                        return res.redirect(`/bienvenida/${guildId}?error=error_guardar`);
+                    }
+                    res.redirect(`/bienvenida/${guildId}?exito=configuracion_guardada`);
+                }
+            );
+        } catch (error) {
+            res.redirect(`/bienvenida/${guildId}?error=error_guardar`);
+        }
     });
 
-    app.get('/embeds/:guildId', estaAutenticado, (req, res) => {
+    app.get('/embeds/:guildId', estaAutenticado, async (req, res) => {
         const guildId = req.params.guildId;
 
-        axios.get(`https://discord.com/api/v10/guilds/${guildId}`, {
-            headers: {
-                'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`
+        try {
+            const servidor = bot.cliente.guilds.cache.get(guildId);
+            if (!servidor) {
+                return res.redirect('/dashboard?error=servidor_no_encontrado');
             }
-        }).then(response => {
-            const servidor = response.data;
 
-            axios.get(`https://discord.com/api/v10/guilds/${guildId}/channels`, {
-                headers: {
-                    'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`
+            const canales = servidor.channels.cache
+                .filter(c => c.type === 0)
+                .map(c => ({ id: c.id, name: c.name }));
+
+            const servidorData = {
+                id: servidor.id,
+                name: servidor.name,
+                icon: servidor.icon
+            };
+
+            baseDatos.all(
+                'SELECT * FROM historial_embeds WHERE guild_id = ? ORDER BY enviado_en DESC LIMIT 50',
+                [guildId],
+                (err, historial) => {
+                    res.render('embeds/embeds', {
+                        usuario: req.user,
+                        servidor: servidorData,
+                        canales: canales,
+                        historial: historial || []
+                    });
                 }
-            }).then(channelsResponse => {
-                const canales = channelsResponse.data.filter(c => c.type === 0);
-
-                baseDatos.all(
-                    'SELECT * FROM historial_embeds WHERE guild_id = ? ORDER BY enviado_en DESC LIMIT 50',
-                    [guildId],
-                    (err, historial) => {
-                        if (err) {
-                            console.error('[RUTAS] Error obteniendo historial:', err.message);
-                        }
-
-                        res.render('embeds/embeds', {
-                            usuario: req.user,
-                            servidor: servidor,
-                            canales: canales,
-                            historial: historial || []
-                        });
-                    }
-                );
-            }).catch(() => {
-                res.render('embeds/embeds', {
-                    usuario: req.user,
-                    servidor: servidor,
-                    canales: [],
-                    historial: []
-                });
-            });
-        }).catch(() => {
+            );
+        } catch (error) {
             res.redirect('/dashboard?error=servidor_no_encontrado');
-        });
+        }
     });
 
     app.post('/embeds/:guildId/enviar', estaAutenticado, async (req, res) => {
@@ -358,7 +380,6 @@ module.exports = function(app, passport, baseDatos, bot) {
 
             res.json({ exito: true, mensaje_id: mensaje.id });
         } catch (error) {
-            console.error('[RUTAS] Error enviando embed:', error.message);
             res.status(500).json({ error: 'Error enviando embed' });
         }
     });

@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="/css/alertas/alertas.css">
+<script src="/js/alertas.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        const exito = urlParams.get('exito');
+        
+        const mensajesError = {
+            'autenticacion': 'Error en la autenticación. Por favor, intenta nuevamente.',
+            'sin_token': 'Error: No se pudo obtener el token de acceso.',
+            'token_expirado': 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+            'servidor_no_encontrado': 'Servidor no encontrado o sin acceso.',
+            'error_obteniendo_config': 'Error al obtener la configuración del servidor.',
+            'error_guardar': 'Error al guardar la configuración.',
+            'sin_permisos': 'No tienes permisos para realizar esta acción.',
+            'error_estadisticas': 'Error al cargar las estadísticas.',
+            'error_autoroles': 'Error al cargar la configuración de autoroles.'
+        };
+        
+        const mensajesExito = {
+            'configuracion_guardada': 'Configuración guardada exitosamente.'
+        };
+        
+        if (error && mensajesError[error]) {
+            mostrarAlertaError(mensajesError[error]);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        if (exito && mensajesExito[exito]) {
+            mostrarAlertaExito(mensajesExito[exito]);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    });
+</script>
