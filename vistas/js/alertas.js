@@ -34,12 +34,14 @@
             <div class="alerta-icono">${obtenerIcono(tipo)}</div>
             <div class="alerta-contenido">
                 <div class="alerta-titulo">${titulo}</div>
-                <div class="alerta-mensaje">${mensaje}</div>
+                <div class="alerta-mensaje"></div>
             </div>
             <button class="alerta-cerrar" aria-label="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         `;
+
+        alerta.querySelector('.alerta-mensaje').textContent = String(mensaje);
 
         const botonCerrar = alerta.querySelector('.alerta-cerrar');
         const cerrar = () => {

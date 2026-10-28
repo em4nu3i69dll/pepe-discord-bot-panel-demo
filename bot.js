@@ -1,3 +1,4 @@
+const { rolAutomaticoSeguro } = require('./src/middleware/seguridad');
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
@@ -243,7 +244,7 @@ cliente.on('guildMemberAdd', async (miembro) => {
                                     }
                                 }
 
-                                await canal.send({ embeds: [embed] });
+                                await canal.send({ embeds: [embed], allowedMentions: { parse: [] } });
                             } catch (error) {}
                         }
                     }
@@ -255,7 +256,7 @@ cliente.on('guildMemberAdd', async (miembro) => {
                         if (Array.isArray(roles)) {
                             for (const rolId of roles) {
                                 const rol = await miembro.guild.roles.fetch(rolId).catch(() => null);
-                                if (rol && miembro.guild.members.me.roles.highest.position > rol.position) {
+                                if (rolAutomaticoSeguro(rol, miembro.guild, miembro.guild.members.me)) {
                                     await miembro.roles.add(rol).catch(() => {});
                                 }
                             }

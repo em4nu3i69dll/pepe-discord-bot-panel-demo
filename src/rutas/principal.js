@@ -1,10 +1,14 @@
 const axios = require('axios');
+const { autorizarServidor, rolAutomaticoSeguro } = require('../middleware/seguridad');
 const { estaAutenticado } = require('../middleware/autenticacion');
 
 async function obtenerServidoresConRetry(accessToken, maxIntentos = 3) {
     for (let intento = 1; intento <= maxIntentos; intento++) {
         try {
             const response = await axios.get('https://discord.com/api/v10/users/@me/guilds', {
+                timeout: 10000,
+                maxRedirects: 0,
+                maxContentLength: 2 * 1024 * 1024,
                 headers: {
                     'Authorization': `Bearer ${accessToken}`
                 }
@@ -12,7 +16,7 @@ async function obtenerServidoresConRetry(accessToken, maxIntentos = 3) {
             return response.data || [];
         } catch (error) {
             if (error.response?.status === 429 && intento < maxIntentos) {
-                const retryAfter = error.response.data?.retry_after || 1;
+                const retryAfter = Math.min(5, Math.max(0, Number(error.response.data?.retry_after) || 1));
                 await new Promise(resolve => setTimeout(resolve, (retryAfter * 1000) + 100));
                 continue;
             }
@@ -23,6 +27,7 @@ async function obtenerServidoresConRetry(accessToken, maxIntentos = 3) {
 }
 
 module.exports = function(app, passport, baseDatos, bot) {
+    const gestionarServidor = autorizarServidor(bot);
     app.get('/', (req, res) => {
         if (req.isAuthenticated()) {
             return res.redirect('/dashboard');
@@ -40,7 +45,7 @@ module.exports = function(app, passport, baseDatos, bot) {
             [],
             (err, stats) => {
                 const metrics = stats || { total_servidores: 0, total_usuarios: 0, total_canales: 0 };
-                
+
                 res.render('login/login', {
                     avatares: [],
                     metrics: {
@@ -57,41 +62,7 @@ module.exports = function(app, passport, baseDatos, bot) {
 
     app.get('/auth/discord/callback', passport.authenticate('discord', {
         failureRedirect: '/login?error=autenticacion'
-    }    ), async (req, res) => {
-        if (!req.user || !req.user.accessToken) {
-            return res.redirect('/login?error=sin_token');
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        try {
-            const servidores = await obtenerServidoresConRetry(req.user.accessToken);
-
-            const servidoresConPermisos = servidores.filter(servidor => {
-                const permisos = BigInt(servidor.permissions || 0);
-                const esAdmin = (permisos & BigInt(0x8)) === BigInt(0x8);
-                const puedeGestionar = (permisos & BigInt(0x20)) === BigInt(0x20);
-                return servidor.owner || esAdmin || puedeGestionar;
-            });
-
-            const clientId = process.env.DISCORD_CLIENT_ID;
-            const servidoresConInfo = servidoresConPermisos.map(servidor => {
-                const tieneBot = bot.cliente.guilds.cache.has(servidor.id);
-                return {
-                    ...servidor,
-                    tieneBot: tieneBot
-                };
-            });
-
-            res.render('dashboard/dashboard', {
-                usuario: req.user,
-                servidores: servidoresConInfo,
-                clientId: clientId
-            });
-        } catch (error) {
-            res.redirect('/dashboard');
-        }
-    });
+    }), (req, res) => res.redirect('/dashboard'));
 
     app.get('/dashboard', estaAutenticado, async (req, res) => {
         if (!req.user) {
@@ -104,7 +75,7 @@ module.exports = function(app, passport, baseDatos, bot) {
 
         try {
             const servidores = await obtenerServidoresConRetry(req.user.accessToken);
-            
+
             const servidoresConPermisos = servidores.filter(servidor => {
                 const permisos = BigInt(servidor.permissions || 0);
                 const esAdmin = (permisos & BigInt(0x8)) === BigInt(0x8);
@@ -130,7 +101,7 @@ module.exports = function(app, passport, baseDatos, bot) {
             if (error.response?.status === 401) {
                 return res.redirect('/login?error=token_expirado');
             }
-            
+
             res.render('dashboard/dashboard', {
                 usuario: req.user,
                 servidores: [],
@@ -139,7 +110,7 @@ module.exports = function(app, passport, baseDatos, bot) {
         }
     });
 
-    app.get('/bienvenida/:guildId', estaAutenticado, async (req, res) => {
+    app.get('/bienvenida/:guildId', estaAutenticado, gestionarServidor, async (req, res) => {
         const guildId = req.params.guildId;
 
         try {
@@ -153,18 +124,16 @@ module.exports = function(app, passport, baseDatos, bot) {
                 .map(c => ({ id: c.id, name: c.name }));
 
             const miembroBot = servidor.members.cache.get(bot.cliente.user.id);
-            const rolMasAltoBot = miembroBot ? miembroBot.roles.highest : null;
-            const posicionBot = rolMasAltoBot ? rolMasAltoBot.position : 0;
-            
+
             const roles = servidor.roles.cache
                 .filter(r => r.id !== servidor.id && !r.managed)
                 .sort((a, b) => b.position - a.position)
-                .map(r => ({ 
-                    id: r.id, 
-                    name: r.name, 
-                    color: r.color, 
-                    position: r.position, 
-                    puedeAsignar: r.position < posicionBot 
+                .map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    color: r.color,
+                    position: r.position,
+                    puedeAsignar: rolAutomaticoSeguro(r, servidor, miembroBot, req.miembroAutorizado)
                 }));
 
             const servidorData = {
@@ -188,11 +157,11 @@ module.exports = function(app, passport, baseDatos, bot) {
                     }
 
                     let configProcesada = config ? { ...config } : {};
-                    
+
                     if (config && config.embed_bienvenida) {
                         try {
-                            const embed = typeof config.embed_bienvenida === 'string' 
-                                ? JSON.parse(config.embed_bienvenida) 
+                            const embed = typeof config.embed_bienvenida === 'string'
+                                ? JSON.parse(config.embed_bienvenida)
                                 : config.embed_bienvenida;
                             configProcesada.embed_bienvenida = {
                                 titulo: embed.title || embed.titulo || '',
@@ -209,10 +178,10 @@ module.exports = function(app, passport, baseDatos, bot) {
 
                     if (config && config.roles_auto) {
                         try {
-                            const rolesParsed = typeof config.roles_auto === 'string' 
-                                ? JSON.parse(config.roles_auto) 
+                            const rolesParsed = typeof config.roles_auto === 'string'
+                                ? JSON.parse(config.roles_auto)
                                 : config.roles_auto;
-                            configProcesada.roles_auto = Array.isArray(rolesParsed) 
+                            configProcesada.roles_auto = Array.isArray(rolesParsed)
                                 ? rolesParsed.map(r => String(r))
                                 : [];
                         } catch (e) {
@@ -236,7 +205,7 @@ module.exports = function(app, passport, baseDatos, bot) {
         }
     });
 
-    app.post('/bienvenida/:guildId', estaAutenticado, async (req, res) => {
+    app.post('/bienvenida/:guildId', estaAutenticado, gestionarServidor, async (req, res) => {
         const guildId = req.params.guildId;
         const {
             bienvenida_habilitada,
@@ -258,16 +227,21 @@ module.exports = function(app, passport, baseDatos, bot) {
             }
 
             const miembroBot = servidor.members.cache.get(bot.cliente.user.id);
-            const rolMasAltoBot = miembroBot ? miembroBot.roles.highest : null;
-            const posicionBot = rolMasAltoBot ? rolMasAltoBot.position : 0;
 
             let rolesSeleccionados = roles_auto ? (Array.isArray(roles_auto) ? roles_auto : [roles_auto]) : [];
             rolesSeleccionados = rolesSeleccionados
                 .map(r => String(r))
                 .filter(roleId => {
                     const rol = servidor.roles.cache.get(roleId);
-                    return rol && rol.position < posicionBot;
+                    return rolAutomaticoSeguro(rol, servidor, miembroBot, req.miembroAutorizado);
                 });
+
+            if (canal_bienvenida_id) {
+                const canal = await servidor.channels.fetch(canal_bienvenida_id).catch(() => null);
+                if (!canal || canal.guildId !== servidor.id || canal.type !== 0) {
+                    return res.status(400).json({ error: 'Canal de bienvenida inválido' });
+                }
+            }
 
             const embedBienvenida = {
                 titulo: embed_titulo || null,
@@ -279,7 +253,7 @@ module.exports = function(app, passport, baseDatos, bot) {
             };
 
             baseDatos.run(
-                `INSERT INTO mensajes_bienvenida 
+                `INSERT INTO mensajes_bienvenida
                  (guild_id, bienvenida_habilitada, canal_bienvenida_id, embed_bienvenida, autorol_habilitado, roles_auto)
                  VALUES (?, ?, ?, ?, ?, ?)
                  ON CONFLICT(guild_id) DO UPDATE SET
@@ -308,7 +282,7 @@ module.exports = function(app, passport, baseDatos, bot) {
         }
     });
 
-    app.get('/embeds/:guildId', estaAutenticado, async (req, res) => {
+    app.get('/embeds/:guildId', estaAutenticado, gestionarServidor, async (req, res) => {
         const guildId = req.params.guildId;
 
         try {
@@ -344,7 +318,7 @@ module.exports = function(app, passport, baseDatos, bot) {
         }
     });
 
-    app.post('/embeds/:guildId/enviar', estaAutenticado, async (req, res) => {
+    app.post('/embeds/:guildId/enviar', estaAutenticado, gestionarServidor, async (req, res) => {
         const guildId = req.params.guildId;
         const { canal_id, datos_embed } = req.body;
 
@@ -355,11 +329,24 @@ module.exports = function(app, passport, baseDatos, bot) {
             }
 
             const canal = await servidor.channels.fetch(canal_id).catch(() => null);
-            if (!canal) {
+            if (!canal || canal.guildId !== servidor.id || canal.type !== 0) {
                 return res.status(404).json({ error: 'Canal no encontrado' });
             }
 
-            const embed = JSON.parse(datos_embed);
+            let embed;
+            try {
+                embed = JSON.parse(datos_embed);
+                if (!embed || typeof embed !== 'object' || Array.isArray(embed)) throw new Error();
+                for (const [campo, limite] of Object.entries({ titulo: 256, descripcion: 4096, footer: 2048, imagen: 2048, thumbnail: 2048, color: 7 })) {
+                    if (embed[campo] != null && (typeof embed[campo] !== 'string' || embed[campo].length > limite)) throw new Error();
+                }
+                if (embed.color && !/^#[a-f0-9]{6}$/i.test(embed.color)) throw new Error();
+                for (const campo of ['imagen', 'thumbnail']) {
+                    if (embed[campo] && !['http:', 'https:'].includes(new URL(embed[campo]).protocol)) throw new Error();
+                }
+            } catch {
+                return res.status(400).json({ error: 'Datos del embed inválidos' });
+            }
             const { EmbedBuilder } = require('discord.js');
             const embedDiscord = new EmbedBuilder();
 
@@ -370,7 +357,7 @@ module.exports = function(app, passport, baseDatos, bot) {
             if (embed.thumbnail) embedDiscord.setThumbnail(embed.thumbnail);
             if (embed.footer) embedDiscord.setFooter({ text: embed.footer });
 
-            const mensaje = await canal.send({ embeds: [embedDiscord] });
+            const mensaje = await canal.send({ embeds: [embedDiscord], allowedMentions: { parse: [] } });
 
             baseDatos.run(
                 'INSERT INTO historial_embeds (guild_id, canal_id, datos_embed) VALUES (?, ?, ?)',

@@ -1,6 +1,6 @@
 # Pepe Demo - Bot de Discord con Panel de Control
 
-Bot de Discord simplificado con panel web para gestionar bienvenidas, embeds y autoroles. Versión demo. 
+Bot de Discord simplificado con panel web para gestionar bienvenidas, embeds y autoroles. Versión demo.
 
 [Preview Demo](https://youtu.be/geo0uuh1tZU)
 
@@ -23,7 +23,7 @@ Bot de Discord simplificado con panel web para gestionar bienvenidas, embeds y a
 
 ### Requisitos Previos
 
-- Node.js v16 o superior
+- Node.js 24 LTS o superior
 - npm o yarn
 - Bot de Discord configurado en [Discord Developer Portal](https://discord.com/developers/applications)
 
@@ -33,12 +33,16 @@ Bot de Discord simplificado con panel web para gestionar bienvenidas, embeds y a
 
 2. **Instalar dependencias**
 ```bash
-npm install
+npm ci
 ```
 
 3. **Configurar variables de entorno**
 
-Configurar en el archivo .ENV todas las variables de entorno necesarias. 
+Copiá `.env.example` a `.env` y completá las credenciales. Generá `SESSION_SECRET` con `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. El servidor no inicia si el secreto falta o tiene menos de 32 bytes.
+
+Para HTTPS usá `NODE_ENV=production` y una URL de callback HTTPS. Si hay un proxy inverso, configurá `PROXY_CONFIABLE` con sus direcciones o rangos concretos. Dejalo vacío cuando el acceso sea directo.
+
+Las sesiones de esta demo se mantienen en memoria y se pierden al reiniciar. Para varias instancias o producción con sesiones persistentes necesitás un almacén de sesiones compartido. No publiques `.env` ni la base SQLite.
 
 ### Cómo obtener las credenciales de Discord
 
@@ -79,3 +83,14 @@ Desarrollado con:
 
 https://github.com/em4nu3i69dll/pepe-discord-bot-panel
 https://pepe.em4nu3l69dll.dev/login
+
+## Actualización 1.0.1
+
+- Permisos comprobados en cada ruta del servidor mediante una consulta actualizada a Discord.
+- Protección CSRF para cambios y cierre de sesión. Estado OAuth2 verificado durante el acceso.
+- Cookies seguras en producción, secreto obligatorio y solicitudes limitadas a 32 KB.
+- Autoroles sujetos a los permisos y jerarquía del usuario y del bot. Los roles con permisos sensibles quedan excluidos.
+- Texto escapado en las vistas previas, nombres de canales y mensajes de alerta.
+- Dependencias actualizadas. La base de datos y el archivo de entorno dejan de formar parte de las nuevas versiones.
+
+Ejecutá `npm test` para comprobar los controles con usuarios y servidores ficticios. Estas pruebas no conectan un bot real a Discord.

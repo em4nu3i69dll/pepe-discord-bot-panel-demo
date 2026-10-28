@@ -40,9 +40,12 @@
                 <span class="user-discriminator">#<%= usuario.discriminator %></span>
             </div>
         </div>
-        <a href="/logout" class="logout-btn">
+        <form action="/logout" method="post">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button type="submit" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i> Salir
-        </a>
+            </button>
+        </form>
     </div>
 </aside>
 

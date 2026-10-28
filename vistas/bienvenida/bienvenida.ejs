@@ -63,6 +63,7 @@
 
         <section class="settings-content">
             <form method="POST" action="/bienvenida/<%= servidor.id %>">
+                <input type="hidden" name="_csrf" value="<%= csrf %>">
                 <div class="tarjeta-configuracion">
                     <div class="tarjeta-configuracion" style="margin: 0; background: rgba(88, 101, 242, 0.05); border: 1px solid rgba(88, 101, 242, 0.2); padding: 1.5rem;">
                         <div class="contenedor-interruptor" style="margin-bottom: 1.5rem; margin-top: 0; display: flex; align-items: center; gap: 15px;">
@@ -99,7 +100,7 @@
                                 <select id="canal-bienvenida" name="canal_bienvenida_id">
                                     <option value="">Seleccionar canal</option>
                                     <% canales.forEach(canal => { %>
-                                        <option value="<%= canal.id %>" <%= config && config.canal_bienvenida_id === canal.id ? 'selected' : '' %>><%-canal.name %></option>
+                                        <option value="<%= canal.id %>" <%= config && config.canal_bienvenida_id === canal.id ? 'selected' : '' %>><%= canal.name %></option>
                                     <% }); %>
                                 </select>
                             </div>
@@ -245,7 +246,7 @@
             function procesarMarkdownDiscord(texto) {
                 if (!texto) return '';
                 
-                let resultado = texto;
+                let resultado = String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 const codigoPlaceholders = [];
                 let placeholderIndex = 0;
                 
